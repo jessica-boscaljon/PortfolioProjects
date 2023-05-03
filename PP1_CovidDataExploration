@@ -1,0 +1,123 @@
+/*
+
+Exploring Covid 19 data using SQL in BigQuery sandbox.
+
+Skills used: Joins, CTE's, Temp Tables, Windows Functions, Aggregate Functions, Creating Views, Converting Data Types
+
+*/
+
+
+select * 
+from PP1.CovidDeaths
+where continent is not null
+order by location, date;
+
+-- select the data to start with
+select location, date, total_cases, new_cases, total_deaths, population
+from PP1.CovidDeaths
+where continent is not null
+order by location, date;
+
+-- looking at Total Cases vs Total Deaths in the United States
+-- shows the likelihood of dying if you contract covid in U.S.
+select location, date, total_cases, total_deaths, (total_deaths/total_cases)*100 as DeathPercentage
+from PP1.CovidDeaths
+where location = 'United States'
+order by date;
+
+-- Total Cases vs Population
+-- shows what % of the population got covid
+select location, date, population, total_cases, (total_cases/population)*100 as CovidPercentage
+from PP1.CovidDeaths
+where location = 'United States'
+order by date;
+
+-- contries with highest infection rate 
+select location, population, max(total_cases) as HighestInfectionCount, max((total_cases/population))*100 as PercentPopulationInfected
+from PP1.CovidDeaths
+group by location, population
+order by PercentPopulationInfected desc;
+
+-- countries with highest death count
+select location, max(total_deaths) as TotalDeathCount
+from PP1.CovidDeaths
+where continent is not null
+group by location
+order by TotalDeathCount desc;
+
+-- continents with highest death count
+select location, max(total_deaths) as TotalDeathCount
+from PP1.CovidDeaths
+where continent is null
+group by location
+order by TotalDeathCount desc;
+
+-- global death percentage over time
+select date, sum(new_cases) as total_cases, sum(new_deaths) as total_deaths, sum(new_deaths)/sum(new_cases)*100 as DeathPertentage
+from PP1.CovidDeaths
+where continent is not null
+group by date
+order by date;
+
+-- total global death percent
+select sum(new_cases) as total_cases, sum(new_deaths) as total_deaths, sum(new_deaths)/sum(new_cases)*100 as DeathPertentage
+from PP1.CovidDeaths
+where continent is not null;
+
+
+-- total Population vs Vaccination
+-- shows percentage of population that has recieved at least one covid vaccine
+Select d.continent, d.location, d.date, d.population, v.new_vaccinations, SUM(v.new_vaccinations) OVER (partition by d.location order by d.location, d.date) as RollingVaccinations -- (RollingVaccinations/d.population)*100
+from PP1.CovidDeaths d 
+join PP1.CovidVaccinations v 
+  on d.location = v.location and d.date = v.date
+where d.continent is not null
+order by d.location, d.date;
+
+
+-- using CTE to perform calculation on Partition By in previous query
+WITH PopvsVac AS
+(
+  Select d.Continent, d.Location, d.Date, d.Population, v.New_Vaccinations, SUM(v.new_vaccinations) OVER (partition by d.location order by d.location, d.date) as RollingVaccinations --RollingVaccinations/d.population
+from PP1.CovidDeaths d 
+join PP1.CovidVaccinations v 
+  on d.location = v.location and d.date = v.date
+where d.continent is not null
+--order by d.location, d.date;
+)
+SELECT *, (RollingVaccinations/population)*100 as PercentPopulationVaccinated
+FROM PopvsVac;
+
+-- using Temp Table to perform calculation on Partition By in previous query
+
+CREATE TEMP TABLE PercentPopulationVaccinated (
+  Continent string,
+  Location string,
+  Date datetime,
+  Population integer,
+  New_Vaccinations integer,
+  RollingVaccinations integer
+);
+
+INSERT INTO PercentPopulationVaccinated
+Select d.Continent, d.Location, d.Date, d.Population, v.New_Vaccinations, SUM(v.new_vaccinations) OVER (partition by d.location order by d.location, d.date) as RollingVaccinations --RollingVaccinations/d.population
+from PP1.CovidDeaths d 
+join PP1.CovidVaccinations v 
+  on d.location = v.location and d.date = v.date
+where d.continent is not null;
+--order by d.location, d.date;
+
+SELECT *, (RollingVaccinations/population)*100 as PercentPopulationVaccinated
+FROM PercentPopulationVaccinated;
+
+-- creating a View to store for later visualizations
+
+create View PP1.PercentPopulationVaccinated as
+Select d.Continent, d.Location, d.Date, d.Population, v.New_Vaccinations, SUM(v.new_vaccinations) OVER (partition by d.location order by d.location, d.date) as RollingVaccinations --RollingVaccinations/d.population
+from PP1.CovidDeaths d 
+join PP1.CovidVaccinations v 
+  on d.location = v.location and d.date = v.date
+where d.continent is not null;
+
+select * from `portfolio-projects-379315.PP1.PercentPopulationVaccinated`;
+
