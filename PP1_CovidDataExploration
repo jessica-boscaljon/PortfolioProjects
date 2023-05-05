@@ -121,3 +121,10 @@ where d.continent is not null;
 
 select * from `portfolio-projects-379315.PP1.PercentPopulationVaccinated`;
 
+create View PP1.GlobalDeathPercent as
+select sum(new_cases) as total_cases, sum(new_deaths) as total_deaths, sum(new_deaths)/sum(new_cases)*100 as DeathPertentage
+from PP1.CovidDeaths
+where continent is not null;
+
+select * from PP1.GlobalDeathPercent;
+
