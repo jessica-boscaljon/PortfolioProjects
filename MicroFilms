@@ -4,7 +4,8 @@ you recently designed. You have been provided an Excel file, MIcroFilms_SDM.xlsx
 You will need to import these tables to Access so you may construct the queries. Once the tables are imported, the dimensional data 
 model should look similar to Figure 1. The queries MFI would like you to create are described below.
 
-Skills used: Correlated subqueries, DCount, union, crosstab
+Skills used: Correlated subqueries, DCount, union, crosstab 
+(please note this project is done in MS Access)
 */
 
 /*
