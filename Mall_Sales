@@ -1,0 +1,236 @@
+/*
+
+Exploring fictional sales data on 3 mall locations: Rue Saint-Paul, Saint Laurent Boulevard, and Saint Catherine Street
+
+*/
+
+--1. What is the daily, weekly, monthly, quarterly profit of each store?
+-- queries for the Rue Saint-Paul location:
+use Sales_DW1
+
+-- daily
+select DimDate.DayOfWeekUSA, DimDate.DayName, DimStores.StoreLocation, sum(FactProductSales.Profit) as DailyProfit
+from (DimDate inner join FactProductSales on DimDate.DateKey = FactProductSales.SalesDateKey)
+	inner join DimStores on FactProductSales.StoreID = DimStores.StoreID
+where DimStores.StoreLocation = 'Rue Saint-Paul'
+group by DimDate.DayOfWeekUSA, DimDate.DayName, DimStores.StoreLocation
+order by DimDate.DayOfWeekUSA
+
+-- weekly
+select DimDate.WeekOfYear, DimStores.StoreLocation, sum(FactProductSales.Profit) as WeeklyProfit
+from (DimDate inner join FactProductSales on DimDate.DateKey = FactProductSales.SalesDateKey)
+	inner join DimStores on FactProductSales.StoreID = DimStores.StoreID
+where DimStores.StoreLocation = 'Rue Saint-Paul'
+group by DimStores.StoreLocation, DimDate.WeekOfYear
+order by DimDate.WeekOfYear
+
+-- monthly
+select DimDate.Month, DimDate.MonthName, DimStores.StoreLocation, sum(FactProductSales.Profit) as MonthlyProfit
+from (DimDate inner join FactProductSales on DimDate.DateKey = FactProductSales.SalesDateKey)
+	inner join DimStores on FactProductSales.StoreID = DimStores.StoreID
+where DimStores.StoreLocation = 'Rue Saint-Paul'
+group by DimStores.StoreLocation, DimDate.Month, DimDate.MonthName
+order by DimDate.Month
+
+-- quarterly
+select DimDate.Quarter, DimDate.QuarterName, DimStores.StoreLocation, sum(FactProductSales.Profit) as QuarterlyProfit
+from (DimDate inner join FactProductSales on DimDate.DateKey = FactProductSales.SalesDateKey)
+	inner join DimStores on FactProductSales.StoreID = DimStores.StoreID
+where DimStores.StoreLocation = 'Rue Saint-Paul'
+group by DimStores.StoreLocation, DimDate.Quarter, DimDate.QuarterName
+order by DimDate.Quarter
+
+-- * repeated these same queries for other two locations *
+
+-------------------------------------------------------------------------------------------------------------------------
+--2. Which product has more demand in which location?
+use Sales_DW1
+
+-- looking at product demand at Rue Saint-Paul
+select DimProduct.ProductName, DimStores.StoreLocation, sum(FactProductSales.Quantity) as Demand
+from (DimProduct inner join FactProductSales on DimProduct.ProductKey = FactProductSales.ProductID)
+	inner join DimStores on FactProductSales.StoreID = DimStores.StoreID
+where DimStores.StoreLocation = 'Rue Saint-Paul'
+group by DimProduct.ProductName, DimStores.StoreLocation
+order by Demand desc
+
+-- looking at product demand at Saint Laurent Boulevard
+select DimProduct.ProductName, DimStores.StoreLocation, sum(FactProductSales.Quantity) as Demand
+from (DimProduct inner join FactProductSales on DimProduct.ProductKey = FactProductSales.ProductID)
+	inner join DimStores on FactProductSales.StoreID = DimStores.StoreID
+where DimStores.StoreLocation = 'Saint Laurent Boulevard'
+group by DimProduct.ProductName, DimStores.StoreLocation
+order by Demand desc
+
+-- looking at product demand at Saint Catherine Street
+select DimProduct.ProductName, DimStores.StoreLocation, sum(FactProductSales.Quantity) as Demand
+from (DimProduct inner join FactProductSales on DimProduct.ProductKey = FactProductSales.ProductID)
+	inner join DimStores on FactProductSales.StoreID = DimStores.StoreID
+where DimStores.StoreLocation = 'Saint Catherine Street'
+group by DimProduct.ProductName, DimStores.StoreLocation
+order by Demand desc
+-------------------------------------------------------------------------------------------------------------------------
+-- 3. Trend in sales by the time period of the day over the week, month, and year for each mall? 
+
+use Sales_DW1
+
+-- over the year:
+select DimDate.MonthName, DimTime.DayTimeBucket, DimTime.HourlyBucket, DimStores.StoreLocation, sum(FactProductSales.Quantity) as SalesQuantity
+from ((DimDate inner join FactProductSales on DimDate.DateKey = FactProductSales.SalesDateKey)
+	inner join DimTime on FactProductSales.SalesTimeKey = DimTime.TimeKey)
+	inner join DimStores on FactProductSales.StoreID = DimStores.StoreID
+where DimStores.StoreLocation = 'Rue Saint-Paul'
+group by DimDate.MonthName, DimTime.DayTimeBucket, DimStores.StoreLocation, DimTime.HourlyBucket
+order by DimTime.HourlyBucket
+
+select DimDate.MonthName, DimTime.DayTimeBucket, DimTime.HourlyBucket, DimStores.StoreLocation, sum(FactProductSales.Quantity) as SalesQuantity
+from ((DimDate inner join FactProductSales on DimDate.DateKey = FactProductSales.SalesDateKey)
+	inner join DimTime on FactProductSales.SalesTimeKey = DimTime.TimeKey)
+	inner join DimStores on FactProductSales.StoreID = DimStores.StoreID
+where DimStores.StoreLocation = 'Saint Laurent Boulevard'
+group by DimDate.MonthName, DimTime.DayTimeBucket, DimStores.StoreLocation, DimTime.HourlyBucket
+order by DimTime.HourlyBucket
+
+select DimDate.MonthName, DimTime.DayTimeBucket, DimTime.HourlyBucket, DimStores.StoreLocation, sum(FactProductSales.Quantity) as SalesQuantity
+from ((DimDate inner join FactProductSales on DimDate.DateKey = FactProductSales.SalesDateKey)
+	inner join DimTime on FactProductSales.SalesTimeKey = DimTime.TimeKey)
+	inner join DimStores on FactProductSales.StoreID = DimStores.StoreID
+where DimStores.StoreLocation = 'Saint Catherine Street'
+group by DimDate.MonthName, DimTime.DayTimeBucket, DimStores.StoreLocation, DimTime.HourlyBucket
+order by DimTime.HourlyBucket
+
+-- * used these same queries to explore over week and month *
+
+-------------------------------------------------------------------------------------------------------------------------
+-- 4. On every Sunday of the current month, what are the total sales and what is the total profit from all the malls? 
+use Sales_DW1
+
+-- for Rue Saint-Paul
+select DimDate.Month, DimDate.DayName, DimStores.StoreLocation, sum(FactProductSales.Quantity) as SalesQuantity, sum(FactProductSales.Profit) as Profit
+from ((DimDate inner join FactProductSales on DimDate.DateKey = FactProductSales.SalesDateKey)
+	inner join DimTime on FactProductSales.SalesTimeKey = DimTime.TimeKey)
+	inner join DimStores on FactProductSales.StoreID = DimStores.StoreID
+where DimStores.StoreLocation = 'Rue Saint-Paul' and DimDate.DayName = 'Sunday'
+group by DimDate.Month, DimDate.DayName,  DimStores.StoreLocation
+
+-- for Saint Laurent Boulevard
+select DimDate.Month, DimDate.DayName, DimStores.StoreLocation, sum(FactProductSales.Quantity) as SalesQuantity, sum(FactProductSales.Profit) as Profit
+from ((DimDate inner join FactProductSales on DimDate.DateKey = FactProductSales.SalesDateKey)
+	inner join DimTime on FactProductSales.SalesTimeKey = DimTime.TimeKey)
+	inner join DimStores on FactProductSales.StoreID = DimStores.StoreID
+where DimStores.StoreLocation = 'Saint Laurent Boulevard' and DimDate.DayName = 'Sunday'
+group by DimDate.Month, DimDate.DayName,  DimStores.StoreLocation
+
+-- for Saint Catherine Street
+select DimDate.Month, DimDate.DayName, DimStores.StoreLocation, sum(FactProductSales.Quantity) as SalesQuantity, sum(FactProductSales.Profit) as Profit
+from ((DimDate inner join FactProductSales on DimDate.DateKey = FactProductSales.SalesDateKey)
+	inner join DimTime on FactProductSales.SalesTimeKey = DimTime.TimeKey)
+	inner join DimStores on FactProductSales.StoreID = DimStores.StoreID
+where DimStores.StoreLocation = 'Saint Catherine Street' and DimDate.DayName = 'Sunday'
+group by DimDate.Month, DimDate.DayName,  DimStores.StoreLocation
+
+
+-------------------------------------------------------------------------------------------------------------------------
+-- 5. What is the trend of sales on weekdays and weekends for each mall? 
+-- for Rue Saint-Paul
+use Sales_DW1
+
+-- for weekdays
+select DimDate.DayOfWeekUSA, DimDate.DayName, DimStores.StoreLocation, sum(FactProductSales.Quantity) as SalesQuantity
+from ((DimDate inner join FactProductSales on DimDate.DateKey = FactProductSales.SalesDateKey)
+	inner join DimTime on FactProductSales.SalesTimeKey = DimTime.TimeKey)
+	inner join DimStores on FactProductSales.StoreID = DimStores.StoreID
+where DimStores.StoreLocation = 'Rue Saint-Paul' and DimDate.DayName not in('Sunday', 'Saturday')
+group by DimDate.DayOfWeekUSA, DimDate.DayName, DimStores.StoreLocation
+order by DimDate.DayOfWeekUSA
+
+-- for weekends
+select DimDate.DayOfWeekUSA, DimDate.DayName, DimStores.StoreLocation, sum(FactProductSales.Quantity) as SalesQuantity
+from ((DimDate inner join FactProductSales on DimDate.DateKey = FactProductSales.SalesDateKey)
+	inner join DimTime on FactProductSales.SalesTimeKey = DimTime.TimeKey)
+	inner join DimStores on FactProductSales.StoreID = DimStores.StoreID
+where DimStores.StoreLocation = 'Rue Saint-Paul' and DimDate.DayName not in('Monday', 'Tuesday', 'Wednesday', 'Thursday','Friday')
+group by DimDate.DayOfWeekUSA, DimDate.DayName, DimStores.StoreLocation
+order by DimDate.DayOfWeekUSA
+
+-- * repeated these queries for other 2 locations *
+
+-------------------------------------------------------------------------------------------------------------------------
+-- 6. What KPI measure(s) indicate(s) growth in the company?
+
+use Sales_DW1
+-- Sales Growth for Rue Saint-Paul
+
+select DimDate.FullDateUSA, DimDate.DayOfWeekUSA, DimDate.DayName, DimStores.StoreLocation, sum(FactProductSales.Quantity) as DailySalesQuantity,
+	format((((sum(FactProductSales.Quantity))-(lag(sum(FactProductSales.Quantity),1) over(order by DimDate.FullDateUSA)))/
+	(lag(sum(FactProductSales.Quantity),1) over(order by DimDate.FullDateUSA))),'p2') as DailySalesGrowth
+from (DimDate inner join FactProductSales on DimDate.DateKey = FactProductSales.SalesDateKey)
+	inner join DimStores on FactProductSales.StoreID = DimStores.StoreID
+where DimStores.StoreLocation = 'Rue Saint-Paul'
+group by DimDate.FullDateUSA, DimDate.DayOfWeekUSA, DimDate.DayName, DimStores.StoreLocation
+order by DimDate.DayOfWeekUSA
+
+select DimDate.WeekOfYear, DimStores.StoreLocation, sum(FactProductSales.Quantity) as WeeklySalesQuantity,
+	format((((sum(FactProductSales.Quantity))-(lag(sum(FactProductSales.Quantity),1) over(order by DimDate.WeekOfYear)))/
+	(lag(sum(FactProductSales.Quantity),1) over(order by DimDate.WeekOfYear))),'p2') as WeeklySalesGrowth
+from (DimDate inner join FactProductSales on DimDate.DateKey = FactProductSales.SalesDateKey)
+	inner join DimStores on FactProductSales.StoreID = DimStores.StoreID
+where DimStores.StoreLocation = 'Rue Saint-Paul'
+group by DimDate.WeekOfYear, DimStores.StoreLocation
+order by DimDate.WeekOfYear
+
+select DimDate.Month, DimStores.StoreLocation, sum(FactProductSales.Quantity) as WeeklySalesQuantity,
+	format((((sum(FactProductSales.Quantity))-(lag(sum(FactProductSales.Quantity),1) over(order by DimDate.Month)))/
+	(lag(sum(FactProductSales.Quantity),1) over(order by DimDate.Month))),'p2') as MonthlySalesGrowth
+from (DimDate inner join FactProductSales on DimDate.DateKey = FactProductSales.SalesDateKey)
+	inner join DimStores on FactProductSales.StoreID = DimStores.StoreID
+where DimStores.StoreLocation = 'Rue Saint-Paul'
+group by DimDate.Month, DimStores.StoreLocation
+order by DimDate.Month
+
+select DimDate.Quarter, DimStores.StoreLocation, sum(FactProductSales.Quantity) as WeeklySalesQuantity,
+	format((((sum(FactProductSales.Quantity))-(lag(sum(FactProductSales.Quantity),1) over(order by DimDate.Quarter)))/
+	(lag(sum(FactProductSales.Quantity),1) over(order by DimDate.Quarter))),'p2') as QuarterlySalesGrowth
+from (DimDate inner join FactProductSales on DimDate.DateKey = FactProductSales.SalesDateKey)
+	inner join DimStores on FactProductSales.StoreID = DimStores.StoreID
+where DimStores.StoreLocation = 'Rue Saint-Paul'
+group by DimDate.Quarter, DimStores.StoreLocation
+order by DimDate.Quarter
+
+-- * also explored sales growth for other two loactions *
+-------------------------------------------------------------------------------------------------------------------------
+-- best sales people
+use Sales_DW1
+
+select DimSalesPerson.SalesPersonName
+from DimSalesPerson
+
+select DimSalesPerson.SalesPersonName, sum(FactProductSales.Quantity) as TotalSales
+from DimSalesPerson inner join FactProductSales on FactProductSales.SalesPersonID = DimSalesPerson.SalesPersonID
+group by DimSalesPerson.SalesPersonName
+order by sum(FactProductSales.Quantity) desc
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
