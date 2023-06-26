@@ -1,0 +1,69 @@
+/*
+
+Creating tables, inserting and updating data, and practicing queries.
+
+*/
+
+CREATE TABLE EmployeeDetails (
+  EmpId INT,
+  FullName VARCHAR(255),
+  ManagerId INT,
+  DateOfJoining DATE,
+  City VARCHAR(255)
+);
+
+INSERT INTO EmployeeDetails (EmpId, FullName, ManagerId, DateOfJoining, City)
+VALUES
+  (121, 'John Snow', 321, '2014-01-31', 'Toronto'),
+  (321, 'Walter White', 986, '2015-01-30', 'Los Angeles'),
+  (421, 'Kuldeep Rana', 876, '2016-27-11', 'New Delhi');
+
+UPDATE EmployeeDetails
+SET DateOfJoining = '2016-11-27'
+WHERE EmpId = 421;
+
+CREATE TABLE EmployeeSalary (
+  EmpId INT,
+  Company VARCHAR(255),
+  Salary INT,
+  Variable INT
+);
+
+INSERT INTO EmployeeSalary (EmpId, Company, Salary, Variable)
+VALUES
+  (121, 'C1', 80000, 5000)
+  (321, 'C2', 100000, 10000)
+  (421, 'C1', 120000, 0);
+
+
+-- fetch EmpID and FullName of all the employees working under Manager with id – ‘876’.
+SELECT EmpId, FullName FROM EmployeeDetails WHERE ManagerId = '876';
+
+-- fetch all those employees who work in a Company other than C1 without using the equal to operator.
+select *
+from EmployeeDetails d inner join EmployeeSalary s on d.EmpId=s.EmpId where company not in('C1');
+
+-- fetch the employees whose name begins with any two characters, followed by a text “hn” and ending with any sequence of characters.
+select * from EmployeeDetails where fullname like '__hn%';
+
+-- fetch all employee records from EmployeeDetails table who have a salary record in EmployeeSalary table.
+select * from EmployeeDetails d
+where exists (select * from EmployeeSalary s where d.EmpId=s.EmpId);
+
+-- fetch only even rows from the table.
+select * from (select *, row_number() over (order by EmpId) RowNum from EmployeeDetails)d
+where d.RowNum % 2 = 0;
+
+-- find the 3rd highest salary from a table without using the TOP/limit keyword.
+select s.salary as ThirdHighestSalary from (select *, row_number() over (order by salary desc) RowNum from EmployeeSalary)s
+where s.RowNum = 3;
+
+
+
+
+
+
+
+
+
+
