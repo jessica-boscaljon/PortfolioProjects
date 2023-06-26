@@ -1,0 +1,83 @@
+/*
+Premise: For this challenge, Micro Films Inc. (MFI) has contracted you to create a series of SQL queries using the sales data mart 
+you recently designed. You have been provided an Excel file, MIcroFilms_SDM.xlsx, containing the necessary dimensional and fact tables. 
+You will need to import these tables to Access so you may construct the queries. Once the tables are imported, the dimensional data 
+model should look similar to Figure 1. The queries MFI would like you to create are described below.
+
+Skills used: Correlated subqueries, DCount, union, crosstab
+*/
+
+/*
+Task 1 (Trend): Write a query to show actual and cumulative percentage for the number of rentals by week of year. 
+Hint: consider using correlated subqueries for the weekly totals and the DCount function to get the overall total.
+*/
+SELECT DISTINCT DO.[Week of Year], ((SELECT Count(RI.rental_id) AS RentalSubTotal
+FROM dimDate AS DI INNER JOIN factRental AS RI ON DI.date_id = RI.last_viewed_date
+WHERE DI.[Week of Year]=DO.[Week of Year])/DCount("rental_id","factRental"))*100 AS RentalWeekTotal,
+((SELECT Count(RI.rental_id) AS RentalSubTotal
+FROM dimDate AS DI INNER JOIN factRental AS RI ON DI.date_id = RI.last_viewed_date
+WHERE DI.[Week of Year]<=DO.[Week of Year])/DCount("rental_id","factRental"))*100 AS RentalCum
+FROM dimDate AS DO
+WHERE DO.[Week of Year] BETWEEN 22 AND 36
+ORDER BY DO.[Week of Year]
+/*
+Task 2 (Variation): Write a query to show the top 3 and bottom 3 countries in terms of Total Rental Revenue. 
+Hint: consider creating two queries, one for the top and one for the bottom, and stack them using a UNION.
+*/
+SELECT Final.Type, Final.Country, Final.TotalRevenues FROM 
+(SELECT "Top 3" as Type, Country, TotalRevenues FROM 
+(SELECT TOP 3 dimCustomer.country AS country, SUM(factRental.rental_charge) AS TotalRevenues 
+FROM dimCustomer INNER JOIN factRental ON dimCustomer.customer_id = factRental.customer_id 
+GROUP BY dimCustomer.country
+ORDER BY SUM(factRental.rental_charge) DESC)
+UNION 
+SELECT "Bottom 3" as Type, Country, TotalRevenues FROM 
+(SELECT TOP 3 dimCustomer.country AS country, SUM(factRental.rental_charge) AS TotalRevenues 
+FROM dimCustomer INNER JOIN factRental ON dimCustomer.customer_id = factRental.customer_id 
+GROUP BY dimCustomer.country ORDER BY SUM(factRental.rental_charge) ASC)) AS Final 
+ORDER BY Final.Type DESC , Final.TotalRevenues DESC;
+/*
+Task 3 (Influence): Write a query to show the average number of days late based on rental rate and rental duration for rentals overdue. 
+Hint: consider using a CrossTab.
+*/
+TRANSFORM Avg(factRental.days_overdue) AS AvgOfdays_overdue 
+SELECT factRental.rental_rate 
+FROM factRental 
+WHERE (((factRental.days_overdue)>0))
+GROUP BY factRental.rental_rate PIVOT factRental.rental_duration;
+/*
+Task 4 (Comparison): Write a query to show the number of rentals per number of films available for each rental rate. 
+Hint: consider using correlated subqueries to find the total films available.
+*/
+SELECT factRental.rental_rate, 
+Count(factRental.rental_id)/(SELECT COUNT(film_ID) FROM dimFilm WHERE dimFilm.rental_rate=factRental.rental_rate) AS RentalsPerFilmsAvailable
+FROM factRental
+GROUP BY factRental.rental_rate;
+
+/*
+Task 5 (Affinity): Write a query to show which category of movie is most likely to be rented on each day of the week. 
+Hint: consider using a correlated subquery to find the highest category count for each day.
+*/
+SELECT DO.[Day Name], FO.category, Count(RO.film_id) AS TotalRentals
+FROM dimFilm AS FO INNER JOIN (dimDate AS DO INNER JOIN factRental AS RO ON DO.date_id = RO.first_viewed_date) ON FO.film_id = RO.film_id
+GROUP BY DO.[Day of Week], DO.[Day Name], FO.category
+HAVING (((Count(RO.film_id)) In (SELECT TOP 1 Count(RI.film_id) AS FilmCount
+FROM dimFilm AS FI INNER JOIN (dimDate AS DI INNER JOIN factRental AS RI ON DI.date_id = RI.first_viewed_date) ON FI.film_id = RI.film_id
+WHERE DO.[Day Name]= DI.[Day Name]
+GROUP BY DI.[Day Name], FI.category
+ORDER BY Count(RI.film_id) DESC)))
+ORDER BY DO.[Day of Week], Count(RO.film_id) DESC;
+
+/*
+Task 6 (Event Sequence): Write a query to average number of days between last viewing of a film and the first viewing of the following film. 
+Hint: consider using a correlated subquery and the MIN function to find the first viewed date of the next film rental.
+*/
+SELECT Avg(RentalDateDiff) AS AvgNoDaysBetweenRentals
+FROM (SELECT RO.customer_id, RO.last_viewed_date AS RentalDate, 
+      (SELECT Min(RI.first_viewed_date) 
+       FROM factRental AS RI 
+       WHERE RI.customer_id = RO.customer_id 
+       AND RI.first_viewed_date>RO.first_viewed_date) AS NextRentalDate, 
+      DateDiff("d",[RentalDate],[NextRentalDate]) AS RentalDateDiff 
+      FROM factRental AS RO) AS RentalDiff
+WHERE (((RentalDiff.RentalDateDiff) Is Not Null));
