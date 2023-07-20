@@ -1,4 +1,5 @@
 /*
+Project from MIS 445
 Premise: For this challenge, Micro Films Inc. (MFI) has contracted you to create a series of SQL queries using the sales data mart 
 you recently designed. You have been provided an Excel file, MIcroFilms_SDM.xlsx, containing the necessary dimensional and fact tables. 
 You will need to import these tables to Access so you may construct the queries. Once the tables are imported, the dimensional data 
